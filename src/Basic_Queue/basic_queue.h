@@ -5,10 +5,10 @@
 #include <vector>
 #include <optional>
 #include <queue>
-struct threadsafe_queue{
+struct basic_queue{
 	std::queue<int> queue;
 
-	threadsafe_queue(){};
+	basic_queue(){};
 	void enque(int);
 	std::optional<int> deque();
 	void run();

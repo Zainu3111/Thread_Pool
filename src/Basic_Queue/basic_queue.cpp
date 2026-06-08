@@ -1,11 +1,11 @@
-#include "thread_safe_queue.h"
+#include "basic_queue.h"
 #include <cstdlib>
 
-void threadsafe_queue::enque(int x){
+void basic_queue::enque(int x){
 	queue.push(x);
 }
 
-std::optional<int> threadsafe_queue::deque(){
+std::optional<int> basic_queue::deque(){
 	if (queue.size() == 0){
 		return {};
 	}
@@ -14,13 +14,13 @@ std::optional<int> threadsafe_queue::deque(){
 	return x;
 }
 
-void threadsafe_queue::run(){
+void basic_queue::run(){
 	for(size_t i{}; i < 100000; ++i){
 		int x = rand() % 100 + 1;  // [1, 100]
 		enque(x);
 	}
 }
 
-size_t threadsafe_queue::size(){
+size_t basic_queue::size(){
 	return queue.size();
 }
