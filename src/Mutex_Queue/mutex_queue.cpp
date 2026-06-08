@@ -8,7 +8,7 @@ void mutex_queue::enque(int x){
 
 std::optional<int> mutex_queue::deque(){
 	std::lock_guard<std::mutex> guard(lock);
-	if (queue.size() == 0){
+	if (queue.empty()){
 		return {};
 	}
 	int x = queue.front();
@@ -24,5 +24,6 @@ void mutex_queue::run(){
 }
 
 size_t mutex_queue::size(){
+	std::lock_guard<std::mutex> guard(lock);
 	return queue.size();
 }
