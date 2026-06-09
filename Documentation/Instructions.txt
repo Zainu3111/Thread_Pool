@@ -4,3 +4,4 @@ This should build ./a.out which should lead to a seg fault.
 g++ -std=c++20 ./src/Mutex_Queue/try.cpp ./src/Mutex_Queue/mutex_queue.cpp -lpthread
 This should build ./a.out which should produce the desired result.
 
+cd into tests and cd into the test you want to run and compile with: g++ test.cpp.

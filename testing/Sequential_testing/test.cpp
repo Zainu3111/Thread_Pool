@@ -1,5 +1,5 @@
 #include <iostream>
-#include "../benchmarks/Prime.h"
+#include "../../benchmarks/Prime.h"
 #include <chrono>
 #define BENCHMARK 1000000
 
@@ -8,7 +8,7 @@ int main(){
 
 	// start code
 	size_t res{};
-	for (size_t i{2}; i <= BENCHMARK; ++i){
+	for (size_t i{0}; i <= BENCHMARK; ++i){
 		if (is_prime(i)){
 			++res;
 		}
