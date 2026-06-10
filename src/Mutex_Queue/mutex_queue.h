@@ -6,14 +6,30 @@
 #include <optional>
 #include <queue>
 #include <mutex>
+
+template <typename T>
 struct mutex_queue{
-	std::queue<int> queue;
+	std::queue<T> queue;
 	std::mutex lock;
 
 	mutex_queue(){};
-	void enque(int);
-	std::optional<int> deque();
-	void run();
-	size_t size();
+	inline void enque(T x){
+		std::lock_guard<std::mutex> gaurd(lock);
+		queue.push(x);
+	}
+
+	std::optional<T> deque(){
+		std::lock_guard<std::mutex> guard(lock);
+		if (queue.empty()){
+			return {};
+		}
+		T x = queue.front();
+		queue.pop();
+		return x;
+	}
+	size_t size(){
+		std::lock_guard<std::mutex> guard(lock);
+		return queue.size();
+	}
 };
 #endif
