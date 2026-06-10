@@ -5,27 +5,10 @@
 #include<iostream>
 #include<vector>
 #include<atomic>
-#include "./Mutex_Queue/mutex_queue.h"
+#include "../../src/Mutex_Queue/mutex_queue.h"
 #include <functional>
 #include<thread>
-#include <optional>
 
-class join_threads{
-	std::vector<std::thread>& threads;
-	public:
-	join_threads(std::vector<std::thread>& t)
-		: threads(t)
-		 {
-		 }
-	~join_threads(){
-		std::cout << "destructor called" << std::endl;
-		for(auto& t : threads){
-			if(t.joinable()){
-				t.join();
-			}
-		}
-	}
-};
 
 class thread_pool{
 	std::atomic_bool done;
@@ -78,20 +61,5 @@ class thread_pool{
 
 };
 
-void run(){
-	thread_pool pool;
-	std::cout << "Testing threadpool" << std::endl;
-	for (int i{}; i < 100; ++i){
-		pool.submit([=]{
-				printf("%d printed by thread - %d \n", i, std::this_thread::get_id());
-				});
-	}
-//	system("pause");
-}
-int main(){
-	run();
-	std::cout << "Done Testing" << std::endl;
-	return 0;
-}
 
 #endif
