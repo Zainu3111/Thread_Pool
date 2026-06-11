@@ -8,4 +8,7 @@ Testing isPrime benchmark for Naive Multi-Threaded solution ran in 149ms.
 A speed up of 3.4 times
 
 Testing isPrime with a basic Threadpool for Multi-Threaded solution runs in 96 ms.
-A speed up of 5.34 times over sequential solution and 1.5 times over naive multi threaded soution.
+A speed up of 5.34 times over sequential solution and 1.5 times over the Naive Threaded approach.
+
+Testing isPrime with a waiting threadpool for multi threaded gives 101 ms.
+Approxiamtely the same as the basic threadpool. This is possibly because of the fact that the work queue always have tasks in it. However, it should be much more efficient on the cpu.

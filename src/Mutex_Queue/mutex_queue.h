@@ -31,5 +31,9 @@ struct mutex_queue{
 		std::lock_guard<std::mutex> guard(lock);
 		return queue.size();
 	}
+	bool is_empty(){
+		std::lock_guard<std::mutex> guard(lock);
+		return queue.size() == 0;
+	}
 };
 #endif
