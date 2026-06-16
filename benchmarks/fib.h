@@ -1,6 +1,6 @@
 #include <iostream>
 #include <future>
-#include "../src/Thread_Safe_Queue/thread_safe_queue.h"
+#include "../src/threadpool.h"
 inline int seq_fib(int n){
 	if (n < 2){
 		return n;
@@ -8,18 +8,22 @@ inline int seq_fib(int n){
 	return seq_fib(n - 1) + seq_fib(n-2);
 }
 
-inline int parallel_fib(threadsafe_queue<std::packaged_task<int()>>& pool, int n){
+inline int parallel_fib(thread_pool& pool, int n){
 	if (n < 30){
 		return seq_fib(n);
 	}
 	std::packaged_task<int()> task1([&pool, n](){
 		return parallel_fib(pool, n - 1);
 			});
+	auto f1 = task1.get_future();
+
 	std::packaged_task<int()> task2([&pool, n](){
 		return parallel_fib(pool, n - 2);
 			});
-	pool.submit(task1);
-	pool.submit(task2);
+	auto f2 = task2.get_future();
 
-	return task1.get() + task2.get();
+	pool.submit([t = std::move(task1)]() mutable { t(); });
+	pool.submit([t = std::move(task2)]() mutable { t(); });
+
+	return f1.get() + f2.get();
 }
