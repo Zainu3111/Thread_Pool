@@ -17,7 +17,7 @@ class threadsafe_queue{
 		std::atomic_bool DONE = false;
 
 	public:
-		threadsafe_queue();
+		threadsafe_queue() = default;
 		threadsafe_queue(const threadsafe_queue&);
 		
 		// remove assignment operator to reduce complexity
@@ -40,7 +40,7 @@ class threadsafe_queue{
 			data_queue.pop();
 			return true;
 		}
-		std::shared_ptr<T> try_pop(){
+		inline std::shared_ptr<T> try_pop(){
 			std::lock_guard<std::mutex> lock(mut);
 			if(data_queue.empty()){
 				return nullptr;
@@ -65,7 +65,7 @@ class threadsafe_queue{
 			return true;
 		}
 
-		std::shared_ptr<T> wait_ant_pop(){
+		inline std::shared_ptr<T> wait_ant_pop(){
 			std::unique_lock<std::mutex> lock(mut);
 			data_cond.wait(lock, [this](){
 				return !data_queue.empty() || DONE;	
