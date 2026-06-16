@@ -82,9 +82,9 @@ class threadsafe_queue{
 			std::lock_guard<std::mutex> lock(mut);
 			return data_queue.empty();
 		}
-
-		void submit(T task){
-			push(task);
+		
+		void set_done_flag(){
+			DONE = true;
 		}
 };
 #endif

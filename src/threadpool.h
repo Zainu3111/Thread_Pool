@@ -41,6 +41,7 @@ class thread_pool{
 
 	~thread_pool(){
 		done = true;
+		global_work_queue.DONE = true;
 		cv.notify_all();
 		int const THREAD_COUNT = std::thread::hardware_concurrency();
 		for (int i{}; i < THREAD_COUNT; ++i){
