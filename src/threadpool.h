@@ -5,51 +5,30 @@
 #include<iostream>
 #include<vector>
 #include<atomic>
-#include "./Mutex_Queue/mutex_queue.h"
+#include "./Thread_Safe_Queue/thread_safe_queue.h"
 #include <functional>
-#include<thread>
-#include <optional>
-
-class join_threads{
-	std::vector<std::thread>& threads;
-	public:
-	join_threads(std::vector<std::thread>& t)
-		: threads(t)
-		 {
-		 }
-	~join_threads(){
-		for(auto& t : threads){
-			if(t.joinable()){
-				t.join();
-			}
-		}
-	}
-};
+#include <thread>
+#include<condition_variable>
 
 class thread_pool{
 	std::atomic_bool done;
-	mutex_queue<std::function<void()>> work_queue;	
+	threadsafe_queue<std::function<void()>> gloabl_work_queue;	
 	std::vector<std::thread> threads;
-	join_threads joiner;
+	std::condition_variable cv;
 
 	void worker_thread(){
-		while(done){
-			auto cur = work_queue.deque();
-			if (cur.has_value()){
-				std::function<void()> task = cur.value();
-				task();
-			}
-			else{
-				std::this_thread::yield();
-			}
+		while(!done){
+			std::function<void()> task;
+			gloabl_work_queue.wait_and_pop(task);
+			task();
 		}
 	}
 	public:
 	thread_pool()
-		: done(false), joiner(threads)
+		: done(false)
 	{
-		int const thread_count = std::thread::hardware_concurrency();
-		for (int i{}; i < thread_count; ++i){
+		int const THREAD_COUNT = std::thread::hardware_concurrency();
+		for (int i{}; i < THREAD_COUNT; ++i){
 			try{
 				threads.push_back(std::thread(&thread_pool::worker_thread, this));
 			}
@@ -62,23 +41,18 @@ class thread_pool{
 
 	~thread_pool(){
 		done = true;
+		cv.notify_all();
+		int const THREAD_COUNT = std::thread::hardware_concurrency();
+		for (int i{}; i < THREAD_COUNT; ++i){
+			if(threads.at(i).joinable()) threads.at(i).join();
+		}
 	}
 
-	template <typename Function_type>
-	void submit(Function_type f){
-		work_queue.enque(std::function<void()> (f));
+	void submit(std::function<void()> new_task){
+		gloabl_work_queue.push(new_task);
 	}
 
 };
 
-void run(){
-	thread_pool pool;
-	std::cout << "Testing threadpool" << std::endl;
-	for (int i{}; i < 100; ++i){
-		pool.submit([=]{
-				std::cout << i << " printed by thread - " << std::this_thread::get_id() << std::endl;
-				});
-	}
-}
 
 #endif

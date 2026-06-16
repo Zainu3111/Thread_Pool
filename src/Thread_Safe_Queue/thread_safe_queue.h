@@ -11,9 +11,10 @@
 template <typename T>
 class threadsafe_queue{
 	private:
-		std::mutex mut;
+		mutable std::mutex mut;
 		std::condition_variable data_cond;
 		std::queue<T> data_queue;
+		std::atomic_bool DONE = false;
 
 	public:
 		threadsafe_queue();
@@ -44,27 +45,35 @@ class threadsafe_queue{
 			if(data_queue.empty()){
 				return nullptr;
 			}
-			std::shared_ptr<T> ptr = std::make_shared(std::move(data_queue.front()));
+			std::shared_ptr<T> ptr = std::make_shared<T>(std::move(data_queue.front()));
 			data_queue.pop();
 			return ptr;
 		}
 
 
 		// similarly for wait and pop
-		inline void wait_and_pop(T& value){
+		inline bool wait_and_pop(T& value){
 			std::unique_lock<std::mutex> lock(mut);
 			data_cond.wait(lock, [this](){
-				return !data_queue.empty();	
+				return !data_queue.empty() || DONE;	
 			});
+			if(DONE && data_queue.empty()){
+				return false;
+			}
 			value = data_queue.front();
 			data_queue.pop();
+			return true;
 		}
+
 		std::shared_ptr<T> wait_ant_pop(){
 			std::unique_lock<std::mutex> lock(mut);
 			data_cond.wait(lock, [this](){
-				return !data_queue.empty();	
+				return !data_queue.empty() || DONE;	
 			});
-			std::shared_ptr<T> value = std::make_shared(std::move(data_queue.front()));
+			if(DONE && data_queue.empty()){
+				return nullptr;
+			}
+			std::shared_ptr<T> value = std::make_shared<T>(std::move(data_queue.front()));
 			data_queue.pop();
 			return value;
 		}
@@ -72,6 +81,10 @@ class threadsafe_queue{
 		bool empty(){
 			std::lock_guard<std::mutex> lock(mut);
 			return data_queue.empty();
+		}
+
+		void submit(T task){
+			push(task);
 		}
 };
 #endif
