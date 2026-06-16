@@ -85,6 +85,7 @@ class threadsafe_queue{
 		
 		void set_done_flag(){
 			DONE = true;
+			data_cond.notify_all();
 		}
 };
 #endif

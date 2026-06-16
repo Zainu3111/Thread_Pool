@@ -12,14 +12,14 @@
 
 class thread_pool{
 	std::atomic_bool done;
-	threadsafe_queue<std::function<void()>> gloabl_work_queue;	
+	threadsafe_queue<std::function<void()>> global_work_queue;	
 	std::vector<std::thread> threads;
 	std::condition_variable cv;
 
 	void worker_thread(){
 		while(!done){
 			std::function<void()> task;
-			gloabl_work_queue.wait_and_pop(task);
+			global_work_queue.wait_and_pop(task);
 			task();
 		}
 	}
@@ -41,7 +41,7 @@ class thread_pool{
 
 	~thread_pool(){
 		done = true;
-		global_work_queue.DONE = true;
+		global_work_queue.set_done_flag();
 		cv.notify_all();
 		int const THREAD_COUNT = std::thread::hardware_concurrency();
 		for (int i{}; i < THREAD_COUNT; ++i){
@@ -50,7 +50,7 @@ class thread_pool{
 	}
 
 	void submit(std::function<void()> new_task){
-		gloabl_work_queue.push(new_task);
+		global_work_queue.push(new_task);
 	}
 
 };
