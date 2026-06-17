@@ -25,7 +25,7 @@ class threadsafe_queue{
 		
 		inline void push(T new_value){
 			std::lock_guard<std::mutex> lock(mut);
-			data_queue.push(new_value);
+			data_queue.push(std::move(new_value));
 			data_cond.notify_one();
 		}
 		
@@ -36,7 +36,7 @@ class threadsafe_queue{
 			if(data_queue.empty()){
 				return false;
 			}
-			value = data_queue.front();
+			value = std::move(data_queue.front());
 			data_queue.pop();
 			return true;
 		}
@@ -60,7 +60,7 @@ class threadsafe_queue{
 			if(DONE && data_queue.empty()){
 				return false;
 			}
-			value = data_queue.front();
+			value = std::move(data_queue.front());
 			data_queue.pop();
 			return true;
 		}

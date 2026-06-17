@@ -1,14 +1,14 @@
 #include <iostream>
 #include "../../benchmarks/fib.h"
 #include <chrono>
-#define BENCHMARK 1000000
+#define BENCHMARK 50
 
 int main(){
 	int n = 40;
 	auto start = std::chrono::steady_clock::now();
 
 	// start code
-	int res = seq_fib(n);
+	int res = seq_fib(BENCHMARK);
 	// end code
 	auto end = std::chrono::steady_clock::now();
 

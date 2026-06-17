@@ -22,8 +22,8 @@ inline int parallel_fib(thread_pool& pool, int n){
 			});
 	auto f2 = task2.get_future();
 
-	pool.submit([t = std::move(task1)]() mutable { t(); });
-	pool.submit([t = std::move(task2)]() mutable { t(); });
-
+	pool.submit(std::move(task1));
+	pool.submit(std::move(task2));
+	pool.worker_while_waiting(f1, f2);
 	return f1.get() + f2.get();
 }

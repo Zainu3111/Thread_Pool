@@ -9,17 +9,18 @@
 #include <functional>
 #include <thread>
 #include<condition_variable>
-
+#include <chrono>
+#include <future>
 class thread_pool{
 	std::atomic_bool done;
-	threadsafe_queue<std::function<void()>> global_work_queue;	
+	threadsafe_queue<std::packaged_task<int()>> global_work_queue;	
 	std::vector<std::thread> threads;
 
 	void worker_thread(){
 		while(true){
-			std::function<void()> task;
+			std::packaged_task<int()> task;
 			if (!global_work_queue.wait_and_pop(task)) break;
-				task();
+			task();
 		}
 	}
 	public:
@@ -46,8 +47,21 @@ class thread_pool{
 		}
 	}
 
-	void submit(std::function<void()> new_task){
+	void submit(std::packaged_task<int()> new_task){
 		global_work_queue.push(std::move(new_task));
+	}
+
+	void worker_while_waiting(std::future<int>& f1, std::future<int>& f2){
+		while(
+				f1.wait_for(std::chrono::seconds(0)) != std::future_status::ready ||
+				f2.wait_for(std::chrono::seconds(0)) != std::future_status::ready){
+			std::packaged_task<int()> task;
+			if(global_work_queue.try_pop(task)){
+				task();
+			}else{
+				std::this_thread::yield();
+			}
+		}
 	}
 
 };
