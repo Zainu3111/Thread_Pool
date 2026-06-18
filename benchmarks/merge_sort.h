@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
-#include <memory>
+#include "../src/threadpool.h"
+#include <future>
 
 inline void merge(std::vector<int>& arr, size_t l, size_t mid, size_t r){
 	size_t n1{mid - l + 1}, n2{r - mid};
@@ -34,6 +35,24 @@ inline void serial_merge_sort(std::vector<int>& arr, size_t l, size_t r){
 		merge(arr, l, mid, r);
 }
 
-inline void parallel_quick_sort(std::vector<int>& arr){
+inline void parallel_merge_sort(thread_pool& pool, std::vector<int>& arr, size_t l, size_t r){
+		if( r - l <= 1000 ) return serial_merge_sort(arr, l, r);
+		if(l >= r){
+			return;
+		}
+		size_t mid{(l + r) / 2};
+		std::packaged_task<void()> task1([&]() {
+				parallel_merge_sort(pool, arr, l, mid);
+		});
+		std::packaged_task<void()> task2([&]() {
+				parallel_merge_sort(pool, arr, mid + 1, r);
+		});
+		auto t1 = task1.get_future();
+		auto t2 = task2.get_future();
 
+		pool.submit(std::move(task1));
+		pool.submit(std::move(task2));
+		serial_merge_sort(arr, mid + 1, r);
+		merge(arr, l, mid, r);
 }
+

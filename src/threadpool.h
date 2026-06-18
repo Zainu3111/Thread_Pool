@@ -11,14 +11,15 @@
 #include<condition_variable>
 #include <chrono>
 #include <future>
+
 class thread_pool{
 	std::atomic_bool done;
-	threadsafe_queue<std::packaged_task<int()>> global_work_queue;	
+	threadsafe_queue<std::function<void()>> global_work_queue;	
 	std::vector<std::thread> threads;
 
 	void worker_thread(){
 		while(true){
-			std::packaged_task<int()> task;
+			std::function<void()> task;
 			if (!global_work_queue.wait_and_pop(task)) break;
 			task();
 		}
@@ -47,15 +48,25 @@ class thread_pool{
 		}
 	}
 
-	void submit(std::packaged_task<int()> new_task){
-		global_work_queue.push(std::move(new_task));
+	template<typename F>
+	auto submit(F f) -> std::future<decltype(f())> {
+		using Result_Type = decltype(f());
+		auto task_ptr = std::make_shared<std::packaged_task<Result_Type()>>(std::move(f));
+		std::future<Result_Type> raw_future = task_ptr->get_future();
+
+		global_work_queue.push([task_ptr](){
+					(*task_ptr)();
+				});
+
+		return raw_future;
 	}
 
-	void worker_while_waiting(std::future<int>& f1, std::future<int>& f2){
+	template <typename R>
+	void worker_while_waiting(std::future<R>& f1, std::future<R>& f2){
 		while(
 				f1.wait_for(std::chrono::seconds(0)) != std::future_status::ready ||
 				f2.wait_for(std::chrono::seconds(0)) != std::future_status::ready){
-			std::packaged_task<int()> task;
+			std::function<void()> task;
 			if(global_work_queue.try_pop(task)){
 				task();
 			}else{
