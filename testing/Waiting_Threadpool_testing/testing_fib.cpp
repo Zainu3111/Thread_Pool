@@ -2,7 +2,7 @@
 #include <iostream>
 #include "../../benchmarks/fib.h"
 #include <chrono>
-#define BENCHMARK 50
+#define BENCHMARK 
 
 void run(){
 	thread_pool pool;
