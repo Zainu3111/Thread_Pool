@@ -42,7 +42,7 @@ class local_thread_deque{
 		inline void push(T* new_value){
 			size_t cur_top = top.load(std::memory_order_relaxed);
 
-			size_t index = cur_top % MASK;
+			size_t index = cur_top % CAPACITY;
 			
 			deque.at(index).store(new_value, std::memory_order_relaxed);
 
@@ -51,23 +51,27 @@ class local_thread_deque{
 		
 		// provide a bool if value refrence provided for value else 
 		// return a shared pointer to the value;
-		bool try_pop_left(T& value){
-			std::lock_guard<std::mutex> lock(mut);
-			if(data_queue.empty()){
+		// owner always pops from the top
+		bool owner_pop(T& value){
+			size_t cur_top = top.load(std::memory_order_relaxed);
+			size_t cur_bottom = bottom.load(std::memory_order_acquire);
+			
+			if (cur_top == cur_bottom) return false;
+			
+			size_t new_top = cur_top - 1;
+
+			if(!top.compare_exchange_strong(cur_top, new_top,
+						std::memory_order_acq_rel,
+						std::memory_order_relaxed)){
 				return false;
 			}
-			value = std::move(data_queue.front());
-			data_queue.pop();
+
+			size_t index = new_top % CAPACITY;
+
+			value = deque[index].load(std::memory_order_relaxed);
 			return true;
 		}
-		inline std::shared_ptr<T> try_pop_left(){
-			std::lock_guard<std::mutex> lock(mut);
-			if(data_queue.empty()){
-				return nullptr;
-			}
-			std::shared_ptr<T> ptr = std::make_shared<T>(std::move(data_queue.front()));
-			data_queue.pop();
-			return ptr;
+		inline std::shared_ptr<T> owner_pop(){
 		}
 
 
