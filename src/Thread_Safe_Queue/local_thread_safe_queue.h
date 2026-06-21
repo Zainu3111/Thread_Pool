@@ -71,45 +71,12 @@ class local_thread_deque{
 			value = deque[index].load(std::memory_order_relaxed);
 			return true;
 		}
-		inline std::shared_ptr<T> owner_pop(){
-		}
-
-
-		// similarly for wait and pop
-		inline bool wait_and_pop_left(T& value){
-			std::unique_lock<std::mutex> lock(mut);
-			data_cond.wait(lock, [this](){
-				return !data_queue.empty() || DONE;	
-			});
-			if(DONE && data_queue.empty()){
-				return false;
-			}
-			value = std::move(data_queue.front());
-			data_queue.pop();
-			return true;
-		}
-
-		inline std::shared_ptr<T> wait_ant_pop_left(){
-			std::unique_lock<std::mutex> lock(mut);
-			data_cond.wait(lock, [this](){
-				return !data_queue.empty() || DONE;	
-			});
-			if(DONE && data_queue.empty()){
-				return nullptr;
-			}
-			std::shared_ptr<T> value = std::make_shared<T>(std::move(data_queue.front()));
-			data_queue.pop();
-			return value;
-		}
 
 		bool empty(){
-			std::lock_guard<std::mutex> lock(mut);
-			return data_queue.empty();
+			size_t cur_top = top.load(std::memory_order_relaxed);
+			size_t cur_bottom = bottom.load(std::memory_order_acquire);
+			return cur_top == cur_bottom;
 		}
 		
-		void set_done_flag(){
-			DONE = true;
-			data_cond.notify_all();
-		}
 };
 #endif
