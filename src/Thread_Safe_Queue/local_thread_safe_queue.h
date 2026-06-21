@@ -1,36 +1,52 @@
-#ifndef QUEUE_HH
-#define QUEUE_HH
+#ifndef LOCAL_QUEUE_HH
+#define LOCAL_QUEUE_HH
 
 #include <iostream>
 #include <vector>
 #include <optional>
-#include <queue>
 #include <memory>
 #include <condition_variable>
-
+#include <atomic>
 
 // Single Write Multiple Reader lock-free
 // data structure specifically to be used 
-// as thread-local queue.
+// as thread-local deque.
 template <typename T>
 class local_thread_deque{
 	private:
-		mutable std::mutex mut;
-		std::condition_variable data_cond;
-		std::queue<T> data_queue;
-		std::atomic_bool DONE = false;
+		static constexpr size_t CAPACITY = 1024;
+		static constexpr size_t MASK = CAPACITY - 1;
+
+
+		std::atomic<size_t> bottom;
+		std::atomic<size_t> top;
+		std::vector<std::atomic<T*>> deque{CAPACITY};
 
 	public:
-		local_thread_deque() = default;
-		local_thread_deque(const local_thread_deque&);
+		local_thread_deque(){
+			bottom.store(0, std::memory_order_relaxed);
+			top.store(0, std::memory_order_relaxed);
+		}
+
+		// remove copy assignment operator
+		local_thread_deque(const local_thread_deque&) = delete;
 		
 		// remove assignment operator to reduce complexity
 		local_thread_deque operator=(const local_thread_deque) = delete;
 		
-		inline void push(T new_value){
-			std::lock_guard<std::mutex> lock(mut);
-			data_queue.push(std::move(new_value));
-			data_cond.notify_one();
+		// The Owner thread will always push and pop from
+		// the top whereas the Thief thread will always pop
+		// the bottom. Hence top will only be updated by 
+		// Owner thread and bottom will always be updated by 
+		// thief thread.
+		inline void push(T* new_value){
+			size_t cur_top = top.load(std::memory_order_relaxed);
+
+			size_t index = cur_top % MASK;
+			
+			deque.at(index).store(new_value, std::memory_order_relaxed);
+
+			top.store(cur_top + 1, std::memory_order_release);
 		}
 		
 		// provide a bool if value refrence provided for value else 
