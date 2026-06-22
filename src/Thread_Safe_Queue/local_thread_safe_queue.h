@@ -39,14 +39,18 @@ class local_thread_deque{
 		// the bottom. Hence top will only be updated by 
 		// Owner thread and bottom will always be updated by 
 		// thief thread.
-		inline void push(T* new_value){
+		inline bool push(T* new_value){
 			size_t cur_top = top.load(std::memory_order_relaxed);
+			size_t cur_bottom = bottom.load(std::memory_order_acquire);
+
+			if (cur_top - cur_bottom > 1024) return false;
 
 			size_t index = cur_top % CAPACITY;
 			
 			deque.at(index).store(new_value, std::memory_order_relaxed);
 
 			top.store(cur_top + 1, std::memory_order_release);
+			return true;
 		}
 		
 		// provide a bool if value refrence provided for value else 
