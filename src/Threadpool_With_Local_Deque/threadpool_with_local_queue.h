@@ -26,6 +26,7 @@ class thread_pool{
 
 	void worker_thread(size_t threadId){
 		tl_worker_id = threadId;
+
 		while(!done.load(std::memory_order_relaxed)){
 			std::function<void()> task;
 			// Check to see if there is work available in
@@ -68,6 +69,7 @@ class thread_pool{
 		for (int i{}; i < THREAD_COUNT; ++i){
 			try{
 				threads.push_back(std::thread(&thread_pool::worker_thread, this, i));
+				local_work_queues.push_back(local_thread_deque<std::function<void()>>{});
 			}
 			catch(...){
 				done.store(true, std::memory_order_relaxed);
@@ -89,11 +91,13 @@ class thread_pool{
 		using Result_Type = decltype(f());
 		auto task_ptr = std::make_shared<std::packaged_task<Result_Type()>>(std::move(f));
 		std::future<Result_Type> raw_future = task_ptr->get_future();
-
+		
+		
 		if (tl_worker_id != static_cast<size_t>(-1)){
-			local_work_queues[tl_worker_id].push([task_ptr](){
-						(*task_ptr)();
-					});
+			auto wrapper = std::make_shared<std::function<void()>>
+				([task_ptr](){ (*task_ptr)(); });
+			std::function<void()>* raw_ptr = wrapper.get();
+			local_work_queues[tl_worker_id].push(raw_ptr);
 		}else{
 			global_work_queue.push([task_ptr](){
 						(*task_ptr)();
