@@ -103,21 +103,26 @@ class local_thread_deque{
 			return true;
 		}
 
-		// A Thief will always pop from the bottom. First we will
-		// check if there are enough tasks in the local queue and
-		// only pop in case we can. The deque must hold atleast
-		// 2 local task for it to be eligible to release tasks.
+		// A Thief will always pop from the top. First we will check
+		// if there are enough tasks in the local queue.
 		bool thief_pop(T& value){
-			size_t cur_top = top.load(std::memory_order_acquire);
-			size_t cur_bottom = bottom.load(std::memory_order_acquire);
-			
-			if (cur_top == cur_bottom) return false;
-			size_t index = cur_bottom % CAPACITY;
-			size_t newBottom = cur_bottom + 1;
 
+			// We load bottom and figure out the size of the arr.
+			size_t cur_bottom = bottom.load(std::memory_order_acquire);
+
+			// We read top
+			size_t cur_top = top.load(std::memory_order_acquire);
+
+			int size = cur_bottom - cur_top;
+			if (size <= 0) return false;
+			
+			// Speculatively read from the local queue.
+			size_t index = cur_top % CAPACITY;
 			auto speculative_read = deque.at(index).load(std::memory_order_relaxed);
 
-			if (bottom.compare_exchange_strong(cur_bottom, newBottom,
+			// Comapare and swap top. If it succeeds then we have
+			// successfully stolen the top.
+			if (top.compare_exchange_strong(cur_top, cur_top + 1,
 						std::memory_order_acq_rel, std::memory_order_relaxed)){
 				value = *speculative_read;
 				return true;
