@@ -17,14 +17,34 @@
 
 
 class thread_pool{
+
+	// With static, compiler has to make sure it is only initialized
+	// once, which leads to a hidden branch which though predictable
+	// adds extra instructions. Checking a raw ptr is much easier
+	// and quicker.
 	inline static thread_local local_thread_deque<std::function<void()>>* thread_local_queue = nullptr;
-	inline static thread_local size_t tl_worker_id = static_cast<size_t>(-1);
+	
+	
+	// done used as atomic bool to make sure when updating done
+	// atomically and visible to all threads.
 	std::atomic_bool done;
+	
+	// gloabl work queue used a mutex based lock since majority of
+	// the work will be pushed to thread_local_queue by each thread
+	// hence no point in using a lock-free queue and introducing
+	// live races.
 	threadsafe_queue<std::function<void()>> global_work_queue;	
+	
+	// Using a vector for threads since we cannot be sure of the
+	// number of threads being used as we use hardware_concurrency
+	// function to add init threads at runtime.
 	std::vector<std::thread> threads;
 
-	std::vector<local_thread_deque<std::function<void()>>> local_work_queues;
+	//std::vector<local_thread_deque<std::function<void()>>> local_work_queues;
+	//inline static thread_local size_t tl_worker_id = static_cast<size_t>(-1);
+	
 
+	//////////////////////////////////////////////////////////////////
 	void worker_thread(size_t threadId){
 		tl_worker_id = threadId;
 
