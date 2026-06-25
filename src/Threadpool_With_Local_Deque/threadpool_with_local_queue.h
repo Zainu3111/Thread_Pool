@@ -17,6 +17,7 @@
 
 
 class thread_pool{
+	inline static thread_local local_thread_deque<std::function<void()>>* thread_local_queue = nullptr;
 	inline static thread_local size_t tl_worker_id = static_cast<size_t>(-1);
 	std::atomic_bool done;
 	threadsafe_queue<std::function<void()>> global_work_queue;	
