@@ -22,8 +22,8 @@ class thread_pool{
 	// once, which leads to a hidden branch which though predictable
 	// adds extra instructions. Checking a raw ptr is much easier
 	// and quicker.
-	inline static thread_local local_thread_deque<std::function<void()>>* thread_local_queue = nullptr;
-	
+	inline static thread_local local_thread_deque<std::function<void()>>* local_queue = nullptr;
+	inline static thread_local size_t tl_worker_id = static_cast<size_t>(-1);
 	
 	// done used as atomic bool to make sure when updating done
 	// atomically and visible to all threads.
@@ -33,43 +33,50 @@ class thread_pool{
 	// the work will be pushed to thread_local_queue by each thread
 	// hence no point in using a lock-free queue and introducing
 	// live races.
-	threadsafe_queue<std::function<void()>> global_work_queue;	
+	threadsafe_queue<std::function<void()>> global_work_queue;
+
+	// A vector of all the local queues to allow for stealing.
+	std::vector<local_thread_deque<std::function<void()>>*> queue_set;
 	
 	// Using a vector for threads since we cannot be sure of the
 	// number of threads being used as we use hardware_concurrency
 	// function to add init threads at runtime.
 	std::vector<std::thread> threads;
 
-	//std::vector<local_thread_deque<std::function<void()>>> local_work_queues;
-	//inline static thread_local size_t tl_worker_id = static_cast<size_t>(-1);
 	
 
 	//////////////////////////////////////////////////////////////////
 	void worker_thread(size_t threadId){
+		local_thread_deque<std::function<void()>> my_queue = ;
+		local_queue = &my_queue;
 		tl_worker_id = threadId;
 
+		// Since we are essentially in a spinning lock and done only gets 
+		// updated once, having other more rigid memory_models adds unnecessary
+		// synchronization.
 		while(!done.load(std::memory_order_relaxed)){
+			
 			std::function<void()> task;
-			// Check to see if there is work available in
-			// local_qork_queue. If no work then move to
-			// global_work_queue.
-			if (local_work_queues[threadId].owner_pop(task)){
+
+			// Checking local queue first in case we have pending work before we
+			// try to steal or go to global work queue to avoid unnecessary work.
+			if (thread_local_queue->owner_pop(task)){
 				task();
 				continue;
 			}
-			// Check to see if there is work in
-			// global_work_queue. if there is work in it,
-			// pop and run task. else try to steal work 
-			// from other threads.
+
+			// Check to see if there is work in global_work_queue. We avoid 
+			// stealing first in order to avoid unnecessary synchronization.
 			if (global_work_queue.try_pop(task)){
 				task();
 				continue;
 			}
+
 			// Attempt to steal work from other threads.
 			bool stole_work = false;
-			for(size_t i{}; i < local_work_queues.size(); ++i){
+			for(size_t i{}; i < threads.size(); ++i){
 				if(i == threadId) continue;
-				if (local_work_queues[i].thief_pop(task)){
+				if (threads[i]->thread_local_queue && threads[i]->thread_local_queue->thief_pop(task)){
 					stole_work = true;
 					break;
 				}
@@ -113,15 +120,15 @@ class thread_pool{
 		auto task_ptr = std::make_shared<std::packaged_task<Result_Type()>>(std::move(f));
 		std::future<Result_Type> raw_future = task_ptr->get_future();
 		
-		
 		if (tl_worker_id != static_cast<size_t>(-1)){
-			auto wrapper = std::make_shared<std::function<void()>>
-				([task_ptr](){ (*task_ptr)(); });
-			std::function<void()>* raw_ptr = wrapper.get();
-			local_work_queues[tl_worker_id].push(raw_ptr);
+			auto* heap_ptr = new std::function<void()>(
+					[task_ptr](){ *(task_ptr)(); }
+					);
+
+			queue_set[tl_worker_id]->push(heap_ptr);
 		}else{
 			global_work_queue.push([task_ptr](){
-						(*task_ptr)();
+						*(task_ptr)();
 					});
 		}
 		return raw_future;
