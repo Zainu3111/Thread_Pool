@@ -30,32 +30,42 @@ class local_thread_deque{
 
 		// We have a vector of size 1024 that stores atomic ptrs
 		// as the deque.
-		std::atomic<T*> deque[CAPACITY];
+		T* deque[CAPACITY]{};
+
+		// Function to correctly sub 2 size_t
+		static constexpr std::ptrdiff_t sub(size_t x, size_t y) noexcept {
+			return static_cast<std::ptrdiff_t>(x) - static_cast<std::ptrdiff_t>(y);
+		}
 
 	public:
 
-		local_thread_deque(){
-			bottom.store(0, std::memory_order_relaxed);
-			top.store(0, std::memory_order_relaxed);
+		local_thread_deque() = default;
+
+		~local_thread_deque(){
+			T* task;
+			while(owner_pop(task)){
+				delete task;
+			}
 		}
 
 		// remove copy assignment operator
 		local_thread_deque(const local_thread_deque&) = delete;
 		
 		// remove assignment operator to reduce complexity
-		local_thread_deque operator=(const local_thread_deque) = delete;
+		local_thread_deque operator=(const local_thread_deque&) = delete;
 		
 		// The Owner thread will always push and pop from the bottom.
 		// It is essentially a stack for the owner
 		inline bool push(T* new_value){
-			size_t cur_bottom = top.load(std::memory_order_relaxed);
-			size_t cur_top = bottom.load(std::memory_order_acquire);
+			size_t cur_bottom = bottom.load(std::memory_order_relaxed);
+			size_t cur_top = top.load(std::memory_order_acquire);
 
-			if (cur_bottom - cur_top >= 1024) return false;
+			auto size = sub(cur_bottom, cur_top);
+			if (size >= CAPACITY) return false;
 
 			size_t index = cur_bottom % CAPACITY;
 			
-			deque.at(index).store(new_value, std::memory_order_relaxed);
+			deque[index] = new_value;
 
 			bottom.store(cur_bottom + 1, std::memory_order_release);
 			return true;
@@ -64,7 +74,7 @@ class local_thread_deque{
 		// Provide a bool if value refrence provided for value else 
 		// return a shared pointer to the value. Owner always pops
 		// from the bottom.
-		bool owner_pop(T& value){
+		bool owner_pop(T*& value){
 			// load bottom from memory. Since only owner changes
 			// bottom, there is no need for synchronization.
 			size_t cur_bottom = bottom.load(std::memory_order_relaxed);
@@ -73,15 +83,19 @@ class local_thread_deque{
 			--cur_bottom;
 			bottom.store(cur_bottom, std::memory_order_release);
 
+			// Bottom can be reordered by the compiler or the 
+			// architecture, so need a memory fence here.
+			std::atomic_thread_fence(std::memory_order_seq_cst);
+
 			// Speculative reading.
 			size_t index = cur_bottom % CAPACITY;
-			auto temp = deque[index].load(std::memory_order_relaxed);
+			auto speculative_read = deque[index];
 
 			// Load top.
 			size_t cur_top = top.load(std::memory_order_acquire);
 
 			// check if empty.
-			int size = cur_bottom - cur_top;
+			auto size = sub(cur_bottom, cur_top);
 			if (size < 0){
 				bottom.store(cur_top, std::memory_order_release);
 				return false;
@@ -91,7 +105,7 @@ class local_thread_deque{
 					std::memory_order_acq_rel, std::memory_order_relaxed)
 				){
 					bottom.store(cur_top + 1, std::memory_order_release);
-					value = *temp;
+					value = speculative_read;
 					return true;
 				}else{
 					bottom.store(cur_top + 1, std::memory_order_release);
@@ -99,13 +113,13 @@ class local_thread_deque{
 				}
 			}
 			
-			value = *temp;
+			value = speculative_read;
 			return true;
 		}
 
 		// A Thief will always pop from the top. First we will check
 		// if there are enough tasks in the local queue.
-		bool thief_pop(T& value){
+		bool thief_pop(T*& value){
 
 			// We load bottom and figure out the size of the arr.
 			size_t cur_bottom = bottom.load(std::memory_order_acquire);
@@ -113,18 +127,18 @@ class local_thread_deque{
 			// We read top
 			size_t cur_top = top.load(std::memory_order_acquire);
 
-			int size = cur_bottom - cur_top;
+			auto size = sub(cur_bottom, cur_top);
 			if (size <= 0) return false;
 			
 			// Speculatively read from the local queue.
 			size_t index = cur_top % CAPACITY;
-			auto speculative_read = deque.at(index).load(std::memory_order_relaxed);
+			auto speculative_read = deque[index];
 
 			// Comapare and swap top. If it succeeds then we have
 			// successfully stolen the top.
 			if (top.compare_exchange_strong(cur_top, cur_top + 1,
 						std::memory_order_acq_rel, std::memory_order_relaxed)){
-				value = *speculative_read;
+				value = speculative_read;
 				return true;
 			}
 			return false;

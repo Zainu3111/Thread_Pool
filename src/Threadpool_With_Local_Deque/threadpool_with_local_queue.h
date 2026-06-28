@@ -20,15 +20,20 @@ class thread_pool{
 
 	// With static, compiler has to make sure it is only initialized
 	// once, which leads to a hidden branch which though predictable
-	// adds extra instructions. Checking a raw ptr is much easier
-	// and quicker.
-	inline static thread_local local_thread_deque<std::function<void()>>* local_queue = nullptr;
+	// adds extra instructions. So, I decided to have a vector of
+	// local_queues whichc should only add some loading instructions.
 	inline static thread_local size_t tl_worker_id = static_cast<size_t>(-1);
 	
 	// done used as atomic bool to make sure when updating done
 	// atomically and visible to all threads.
 	std::atomic_bool done;
-	
+
+	// Keeps a number in memory. Should be quicker to load from memory
+	// than to execute a function every single time we need it. 
+	// Furthermore, we can just initialize queues with a default size 
+	// rather than reserving extra space later.
+	const size_t THREAD_COUNT = std::thread::hardware_concurrency();
+
 	// gloabl work queue used a mutex based lock since majority of
 	// the work will be pushed to thread_local_queue by each thread
 	// hence no point in using a lock-free queue and introducing
@@ -36,18 +41,20 @@ class thread_pool{
 	threadsafe_queue<std::function<void()>> global_work_queue;
 
 	// A vector of all the local queues to allow for stealing.
-	std::vector<local_thread_deque<std::function<void()>>*> queue_set;
+	std::vector<local_thread_deque<std::function<void()>>*> queue_set(THREAD_COUNT);
 	
 	// Using a vector for threads since we cannot be sure of the
 	// number of threads being used as we use hardware_concurrency
 	// function to add init threads at runtime.
-	std::vector<std::thread> threads;
+	std::vector<std::thread> threads[THREAD_COUNT];
+
+	// Keeps a number in memory. Should be quicker to load from memory than to execute a function every single time we need it.
 
 	
 
 	//////////////////////////////////////////////////////////////////
 	void worker_thread(size_t threadId){
-		local_thread_deque<std::function<void()>> my_queue = ;
+		local_thread_deque<std::function<void()>> my_queue;
 		local_queue = &my_queue;
 		tl_worker_id = threadId;
 
@@ -94,10 +101,18 @@ class thread_pool{
 		: done(false)
 	{
 		int const THREAD_COUNT = std::thread::hardware_concurrency();
+
+		threads.reserve(THREAD_COUNT);
+		queue_set.reserve(THREAD_COUNT);
 		for (int i{}; i < THREAD_COUNT; ++i){
+			// Init local queue before we init the thread since we 
+			// want to access the local queue and might access before
+			// it is init -> random seg faults.
 			try{
+				auto my_queue = std::make_shared(local_thread_deque<std::function<void()>>);
+
+				queue_set.push_back(my_queue);
 				threads.push_back(std::thread(&thread_pool::worker_thread, this, i));
-				local_work_queues.push_back(local_thread_deque<std::function<void()>>{});
 			}
 			catch(...){
 				done.store(true, std::memory_order_relaxed);
@@ -109,8 +124,10 @@ class thread_pool{
 	~thread_pool(){
 		done = true;
 		global_work_queue.set_done_flag();
-		for (auto& t : threads){
-			if(t.joinable()) t.join();
+		int const THREAD_COUNT = std::thread::hardware_concurrency();
+		for (int i{}; i < THREAD_COUNT; ++i){
+			if(threads[i].joinable()) threads[i].join();
+			delete queue_set[i];
 		}
 	}
 
