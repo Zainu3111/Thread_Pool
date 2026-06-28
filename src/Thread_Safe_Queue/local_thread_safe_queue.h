@@ -30,7 +30,7 @@ class local_thread_deque{
 
 		// We have a vector of size 1024 that stores atomic ptrs
 		// as the deque.
-		T* deque[CAPACITY]{};
+		std::atomic<T*> deque[CAPACITY];
 
 		// Function to correctly sub 2 size_t
 		static constexpr std::ptrdiff_t sub(size_t x, size_t y) noexcept {
@@ -52,7 +52,7 @@ class local_thread_deque{
 		local_thread_deque(const local_thread_deque&) = delete;
 		
 		// remove assignment operator to reduce complexity
-		local_thread_deque operator=(const local_thread_deque&) = delete;
+		local_thread_deque& operator=(const local_thread_deque&) = delete;
 		
 		// The Owner thread will always push and pop from the bottom.
 		// It is essentially a stack for the owner
@@ -65,7 +65,7 @@ class local_thread_deque{
 
 			size_t index = cur_bottom % CAPACITY;
 			
-			deque[index] = new_value;
+			deque[index].store(new_value, std::memory_order_relaxed);
 
 			bottom.store(cur_bottom + 1, std::memory_order_release);
 			return true;
@@ -89,7 +89,7 @@ class local_thread_deque{
 
 			// Speculative reading.
 			size_t index = cur_bottom % CAPACITY;
-			auto speculative_read = deque[index];
+			auto speculative_read = deque[index].load(std::memory_order_relaxed);
 
 			// Load top.
 			size_t cur_top = top.load(std::memory_order_acquire);
@@ -106,14 +106,17 @@ class local_thread_deque{
 				){
 					bottom.store(cur_top + 1, std::memory_order_release);
 					value = speculative_read;
+					deque[index].store(nullptr, std::memory_order_relaxed);
 					return true;
 				}else{
 					bottom.store(cur_top + 1, std::memory_order_release);
 					return false;
 				}
 			}
-			
+
 			value = speculative_read;
+			deque[index].store(nullptr, std::memory_order_relaxed);
+
 			return true;
 		}
 
@@ -132,13 +135,14 @@ class local_thread_deque{
 			
 			// Speculatively read from the local queue.
 			size_t index = cur_top % CAPACITY;
-			auto speculative_read = deque[index];
+			auto speculative_read = deque[index].load(std::memory_order_relaxed);
 
 			// Comapare and swap top. If it succeeds then we have
 			// successfully stolen the top.
 			if (top.compare_exchange_strong(cur_top, cur_top + 1,
 						std::memory_order_acq_rel, std::memory_order_relaxed)){
 				value = speculative_read;
+				deque[index].store(nullptr, std::memory_order_relaxed);
 				return true;
 			}
 			return false;
