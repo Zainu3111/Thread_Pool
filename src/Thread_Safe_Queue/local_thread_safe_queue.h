@@ -9,6 +9,7 @@
 #include <atomic>
 
 
+
 // Implementation of Chase-Lev queue as proposed by their paper 
 // "Dynamic Circular Work-Stealing Deque" from 2005.
 
@@ -31,6 +32,16 @@ class local_thread_deque{
 		// We have a vector of size 1024 that stores atomic ptrs
 		// as the deque.
 		std::atomic<T*> deque[CAPACITY];
+
+		// Reference Count to figure out if we can delete the queue
+		std::atomic<int> ref_count{0};
+
+		
+		bool no_thief_popping(){
+			//TODO add functionality
+			return false;
+		}
+
 
 		// Function to correctly sub 2 size_t
 		static constexpr std::ptrdiff_t sub(size_t x, size_t y) noexcept {
@@ -80,30 +91,30 @@ class local_thread_deque{
 			// load bottom from memory. Since only owner changes
 			// bottom, there is no need for synchronization.
 			size_t cur_bottom = bottom.load(std::memory_order_relaxed);
-
+			
 			// Load top.
 			size_t cur_top = top.load(std::memory_order_acquire);
-
-			// check if empty.
-			auto size = sub(cur_bottom, cur_top);
-			if (size == 0) return false;
+			
+			if(cur_bottom == cur_top) return false;
 
 			// Decrement bottom to show we are attempting poping.
 			--cur_bottom;
 			bottom.store(cur_bottom, std::memory_order_release);
 
+			// check if empty.
+			auto size = sub(cur_bottom, cur_top);
+			
 			// Bottom can be reordered by the compiler or the 
 			// architecture, so need a memory fence here.
 			std::atomic_thread_fence(std::memory_order_seq_cst);
-
-			// Speculative reading.
-			size_t index = cur_bottom % CAPACITY;
-			auto speculative_read = deque[index].load(std::memory_order_relaxed);
 
 			if (size < 0){
 				bottom.store(cur_top, std::memory_order_release);
 				return false;
 			}
+			// Speculative reading.
+			size_t index = cur_bottom % CAPACITY;
+			auto speculative_read = deque[index].load(std::memory_order_relaxed);
 
 			if(size == 0){ 
 				if(top.compare_exchange_strong(cur_top, cur_top + 1,
