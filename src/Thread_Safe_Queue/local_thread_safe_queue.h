@@ -42,6 +42,8 @@ class local_thread_deque{
 		local_thread_deque() = default;
 
 		~local_thread_deque(){
+		// Preconditions:
+		// 					all worker threads HAVE terminated
 			T* task;
 			while(owner_pop(task)){
 				delete task;
@@ -79,6 +81,13 @@ class local_thread_deque{
 			// bottom, there is no need for synchronization.
 			size_t cur_bottom = bottom.load(std::memory_order_relaxed);
 
+			// Load top.
+			size_t cur_top = top.load(std::memory_order_acquire);
+
+			// check if empty.
+			auto size = sub(cur_bottom, cur_top);
+			if (size == 0) return false;
+
 			// Decrement bottom to show we are attempting poping.
 			--cur_bottom;
 			bottom.store(cur_bottom, std::memory_order_release);
@@ -91,22 +100,17 @@ class local_thread_deque{
 			size_t index = cur_bottom % CAPACITY;
 			auto speculative_read = deque[index].load(std::memory_order_relaxed);
 
-			// Load top.
-			size_t cur_top = top.load(std::memory_order_acquire);
-
-			// check if empty.
-			auto size = sub(cur_bottom, cur_top);
 			if (size < 0){
 				bottom.store(cur_top, std::memory_order_release);
 				return false;
 			}
+
 			if(size == 0){ 
 				if(top.compare_exchange_strong(cur_top, cur_top + 1,
 					std::memory_order_acq_rel, std::memory_order_relaxed)
 				){
 					bottom.store(cur_top + 1, std::memory_order_release);
 					value = speculative_read;
-					deque[index].store(nullptr, std::memory_order_relaxed);
 					return true;
 				}else{
 					bottom.store(cur_top + 1, std::memory_order_release);
@@ -115,7 +119,6 @@ class local_thread_deque{
 			}
 
 			value = speculative_read;
-			deque[index].store(nullptr, std::memory_order_relaxed);
 
 			return true;
 		}
@@ -142,7 +145,6 @@ class local_thread_deque{
 			if (top.compare_exchange_strong(cur_top, cur_top + 1,
 						std::memory_order_acq_rel, std::memory_order_relaxed)){
 				value = speculative_read;
-				deque[index].store(nullptr, std::memory_order_relaxed);
 				return true;
 			}
 			return false;
