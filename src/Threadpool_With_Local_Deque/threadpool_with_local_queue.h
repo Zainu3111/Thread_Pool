@@ -99,12 +99,17 @@ class thread_pool{
 	{
 		threads.reserve(THREAD_COUNT);
 		queue_set.reserve(THREAD_COUNT);
+		
+		// Init local queue before we init the thread since we 
+		// want to access the local queue and might access before
+		// it is init -> random seg faults.
+		for (int x{}; x < THREAD_COUNT; ++x){
+			queue_set.push_back(new local_thread_deque<std::function<void()>>);
+		}
+		
+		// Init threads -> should not cause seg faults now.
 		for (int i{}; i < THREAD_COUNT; ++i){
-			// Init local queue before we init the thread since we 
-			// want to access the local queue and might access before
-			// it is init -> random seg faults.
 			try{
-				queue_set.push_back(new local_thread_deque<std::function<void()>>);
 				threads.push_back(
 						std::thread(&thread_pool::worker_thread, this, i)
 						);
