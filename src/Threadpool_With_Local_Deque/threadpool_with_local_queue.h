@@ -41,21 +41,15 @@ class thread_pool{
 	threadsafe_queue<std::function<void()>> global_work_queue;
 
 	// A vector of all the local queues to allow for stealing.
-	std::vector<local_thread_deque<std::function<void()>>*> queue_set(THREAD_COUNT);
+	std::vector<local_thread_deque<std::function<void()>>*> queue_set;
 	
 	// Using a vector for threads since we cannot be sure of the
 	// number of threads being used as we use hardware_concurrency
 	// function to add init threads at runtime.
-	std::vector<std::thread> threads[THREAD_COUNT];
-
-	// Keeps a number in memory. Should be quicker to load from memory than to execute a function every single time we need it.
-
-	
+	std::vector<std::thread> threads;
 
 	//////////////////////////////////////////////////////////////////
 	void worker_thread(size_t threadId){
-		local_thread_deque<std::function<void()>> my_queue;
-		local_queue = &my_queue;
 		tl_worker_id = threadId;
 
 		// Since we are essentially in a spinning lock and done only gets 
@@ -63,15 +57,17 @@ class thread_pool{
 		// synchronization.
 		while(!done.load(std::memory_order_relaxed)){
 			
-			std::function<void()> task;
+			std::function<void()>* task_ptr = nullptr;
 
 			// Checking local queue first in case we have pending work before we
 			// try to steal or go to global work queue to avoid unnecessary work.
-			if (thread_local_queue->owner_pop(task)){
-				task();
+			if (queue_set[tl_worker_id]->owner_pop(task_ptr)){
+				(*task_ptr)();
+				delete task_ptr;
 				continue;
 			}
 
+			std::function<void()> task;
 			// Check to see if there is work in global_work_queue. We avoid 
 			// stealing first in order to avoid unnecessary synchronization.
 			if (global_work_queue.try_pop(task)){
@@ -82,14 +78,15 @@ class thread_pool{
 			// Attempt to steal work from other threads.
 			bool stole_work = false;
 			for(size_t i{}; i < threads.size(); ++i){
-				if(i == threadId) continue;
-				if (threads[i]->thread_local_queue && threads[i]->thread_local_queue->thief_pop(task)){
+				if(i == tl_worker_id) continue;
+				if (queue_set[i] && queue_set[i]->thief_pop(task_ptr)){
 					stole_work = true;
 					break;
 				}
 			}
 			if (stole_work){
-				task();
+				(*task_ptr)();
+				delete task_ptr;
 				continue;
 			}
 			std::this_thread::yield();
@@ -100,8 +97,6 @@ class thread_pool{
 	thread_pool()
 		: done(false)
 	{
-		int const THREAD_COUNT = std::thread::hardware_concurrency();
-
 		threads.reserve(THREAD_COUNT);
 		queue_set.reserve(THREAD_COUNT);
 		for (int i{}; i < THREAD_COUNT; ++i){
@@ -109,10 +104,10 @@ class thread_pool{
 			// want to access the local queue and might access before
 			// it is init -> random seg faults.
 			try{
-				auto my_queue = std::make_shared(local_thread_deque<std::function<void()>>);
-
-				queue_set.push_back(my_queue);
-				threads.push_back(std::thread(&thread_pool::worker_thread, this, i));
+				queue_set.push_back(new local_thread_deque<std::function<void()>>);
+				threads.push_back(
+						std::thread(&thread_pool::worker_thread, this, i)
+						);
 			}
 			catch(...){
 				done.store(true, std::memory_order_relaxed);
@@ -124,7 +119,6 @@ class thread_pool{
 	~thread_pool(){
 		done = true;
 		global_work_queue.set_done_flag();
-		int const THREAD_COUNT = std::thread::hardware_concurrency();
 		for (int i{}; i < THREAD_COUNT; ++i){
 			if(threads[i].joinable()) threads[i].join();
 			delete queue_set[i];
@@ -157,15 +151,17 @@ class thread_pool{
 		while(
 				f1.wait_for(std::chrono::seconds(0)) != std::future_status::ready ||
 				f2.wait_for(std::chrono::seconds(0)) != std::future_status::ready){
-			std::function<void()> task;
+			std::function<void()>* task_ptr;
 			// Attempt to work from own queue.
 			bool is_worker = (tl_worker_id != static_cast<size_t>(-1));
 
-			if(is_worker && local_work_queues[tl_worker_id].owner_pop(task)){
-				task();
+			if(is_worker && queue_set[tl_worker_id]->owner_pop(task_ptr)){
+				(*task_ptr)();
+				delete task_ptr;
 				continue;
 			}
 
+			std::function<void()> task;
 			// Attempt to work on global queue.
 			if (global_work_queue.try_pop(task)){
 				task();
@@ -174,15 +170,16 @@ class thread_pool{
 
 			// Attempt to steal work from other threads.
 			bool stole_work = false;
-			for(size_t i{}; i < local_work_queues.size(); ++i){
+			for(size_t i{}; i < THREAD_COUNT; ++i){
 				if(i == tl_worker_id) continue;
-				if (local_work_queues[i].thief_pop(task)){
+				if (queue_set[i]->thief_pop(task_ptr)){
 					stole_work = true;
 					break;
 				}
 			}
 			if (stole_work){
-				task();
+				(*task_ptr)();
+				delete task_ptr;
 				continue;
 			}
 			
