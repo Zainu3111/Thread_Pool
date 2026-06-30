@@ -2,7 +2,7 @@
 #include "../../benchmarks/merge_sort.h"
 #include "../../src/Threadpool_With_Local_Deque/threadpool_with_local_queue.h"
 #include <chrono>
-#define BENCHMARK 10000000
+#define BENCHMARK 1000000
 #include <vector>
 #include <random>
 #include <algorithm>
@@ -35,5 +35,10 @@ int main(){
 
 	auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 	std::cout << "Total Time: " << ms.count() << " ms\n";
+	std::cout << "[";
+	for(size_t i{}; i < 100; ++i){
+		std::cout << arr[i] << ", ";
+	}
+	std::cout << "]" << std::endl;
 	return 0;
 }

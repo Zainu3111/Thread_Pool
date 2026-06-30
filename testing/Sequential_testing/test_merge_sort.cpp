@@ -1,7 +1,7 @@
 #include <iostream>
 #include "../../benchmarks/merge_sort.h"
 #include <chrono>
-#define BENCHMARK 10000000
+#define BENCHMARK 100000000
 #include <vector>
 #include <random>
 #include <algorithm>

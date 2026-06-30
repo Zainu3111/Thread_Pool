@@ -11,7 +11,7 @@ inline void merge(std::vector<int>& arr, size_t l, size_t mid, size_t r){
 	for(size_t i{}; i < n2; ++i) tmp2.at(i) = arr.at(mid + 1 + i);
 	size_t p1{}, p2{}, pos{l};
 	while(p1 < n1 && p2 < n2){
-		if(tmp1.at(p1) >= tmp2.at(p2)){
+		if(tmp1.at(p1) <= tmp2.at(p2)){
 			arr.at(pos++) = tmp1.at(p1++);
 		}else{
 			arr.at(pos++) = tmp2.at(p2++);
