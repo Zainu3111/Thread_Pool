@@ -75,7 +75,10 @@ class thread_pool{
 				continue;
 			}
 
-			// Attempt to steal work from other threads.
+			// Attempt to steal work from other threads. Using threads.size or 
+			// queue_set.size for checking other queues rather than thread count 
+			// in case os throws an exception and is unable to allocate a thread.
+			// Better to use the size rather than hard coded numbers.
 			bool stole_work = false;
 			for(size_t i{}; i < threads.size(); ++i){
 				if(i == tl_worker_id) continue;
@@ -136,13 +139,18 @@ class thread_pool{
 		auto task_ptr = std::make_shared<std::packaged_task<Result_Type()>>(std::move(f));
 		std::future<Result_Type> raw_future = task_ptr->get_future();
 		
+		bool push_success{false};
 		if (tl_worker_id != static_cast<size_t>(-1)){
 			auto* heap_ptr = new std::function<void()>(
 					[task_ptr](){ *(task_ptr)(); }
 					);
-
-			queue_set[tl_worker_id]->push(heap_ptr);
-		}else{
+			if(queue_set[tl_worker_id]->push(heap_ptr)){
+				push_success = true;
+			}else{
+				delete heap_ptr;
+			}
+		}
+		if (!push_success){
 			global_work_queue.push([task_ptr](){
 						*(task_ptr)();
 					});
@@ -175,7 +183,7 @@ class thread_pool{
 
 			// Attempt to steal work from other threads.
 			bool stole_work = false;
-			for(size_t i{}; i < THREAD_COUNT; ++i){
+			for(size_t i{}; i < queue_set.size(); ++i){
 				if(i == tl_worker_id) continue;
 				if (queue_set[i]->thief_pop(task_ptr)){
 					stole_work = true;
