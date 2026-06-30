@@ -142,7 +142,7 @@ class thread_pool{
 		bool push_success{false};
 		if (tl_worker_id != static_cast<size_t>(-1)){
 			auto* heap_ptr = new std::function<void()>(
-					[task_ptr](){ *(task_ptr)(); }
+					[task_ptr](){ (*task_ptr)(); }
 					);
 			if(queue_set[tl_worker_id]->push(heap_ptr)){
 				push_success = true;
@@ -152,7 +152,7 @@ class thread_pool{
 		}
 		if (!push_success){
 			global_work_queue.push([task_ptr](){
-						*(task_ptr)();
+						(*task_ptr)();
 					});
 		}
 		return raw_future;

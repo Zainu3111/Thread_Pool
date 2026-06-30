@@ -2,16 +2,14 @@
 #include <iostream>
 #include "../../benchmarks/fib.h"
 #include <chrono>
-#define BENCHMARK 
+#define BENCHMARK 50 
 
 void run(){
 	thread_pool pool;
 	std::cout << "Testing threadpool" << std::endl;
-	std::packaged_task<int()> task([&pool](){
+	auto val = pool.submit([&pool](){
 			return parallel_fib(pool, BENCHMARK);
 			});
-	auto val = task.get_future();
-	pool.submit(std::move(task));
 	std::cout << "fib of " << BENCHMARK << " = " << val.get() << std::endl;
 }
 
