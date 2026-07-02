@@ -1,9 +1,9 @@
-#include "./basic_threadpool.h"
+#include "../../src/threadpool.h"
 #include <iostream>
-#include "../../benchmarks/Prime.h"
+#include "../../benchmarks/prime.h"
 #include <chrono>
-#define BENCHMARK 1000000
-#define TEST_SIZE 850
+#define BENCHMARK 10000000
+#define TEST_SIZE 1000
 #include <unordered_map>
 size_t test(size_t start, size_t end){
 	size_t res{};

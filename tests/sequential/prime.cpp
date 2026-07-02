@@ -1,21 +1,25 @@
 #include <iostream>
-#include "../../benchmarks/fib.h"
+#include "../../benchmarks/prime.h"
 #include <chrono>
-#define BENCHMARK 50
+#define BENCHMARK 10000000
 
 int main(){
-	int n = 40;
+	std::cout << "Testing Sequential Prime" << std::endl;
 	auto start = std::chrono::steady_clock::now();
 
 	// start code
-	int res = seq_fib(BENCHMARK);
+	
+	size_t res{};
+	for (size_t i{0}; i <= BENCHMARK; ++i){
+		if (is_prime(i)){
+			++res;
+		}
+	}
 	// end code
 	auto end = std::chrono::steady_clock::now();
 
 	auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-//	std::cout << end.count() << std::endl;
-	std::cout << "fib " << n << ": " << res << std::endl;
+	std::cout << "Total Primes: " << res << std::endl;
 	std::cout << "Total Time: " << ms.count() << " ms\n";
 	return 0;
 }
-

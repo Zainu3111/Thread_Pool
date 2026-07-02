@@ -1,17 +1,17 @@
 #include <iostream>
-#include "../../benchmarks/merge_sort.h"
-#include "../../src/threadpool.h"
+#include "./merge_sort.h"
+#include "./threadpool.h"
 #include <chrono>
-#define BENCHMARK 10000000
+#define BENCHMARK 100000000
 #include <vector>
 #include <random>
 #include <algorithm>
 
 void run(std::vector<int>& arr){
 	thread_pool pool;
-	std::cout << "Testing threadpool" << std::endl;
+	std::cout << "Testing Merge-Sort With a Global Lock-Based Queue Threadpool" << std::endl;
 	auto task = pool.submit([&pool, &arr](){
-			parallel_merge_sort(pool, arr, 0, arr.size());
+			parallel_merge_sort(pool, arr, 0, arr.size() - 1);
 			});
 	task.wait();
 }
@@ -35,5 +35,10 @@ int main(){
 
 	auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 	std::cout << "Total Time: " << ms.count() << " ms\n";
+	std::cout << "[";
+	for(size_t i{}; i < 100; ++i){
+		std::cout << arr[i] << ", ";
+	}
+	std::cout << "]" << std::endl;
 	return 0;
 }

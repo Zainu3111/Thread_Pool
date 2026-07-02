@@ -1,12 +1,12 @@
-#include "../../src/Threadpool_With_Local_Deque/threadpool_with_local_queue.h"
+#include "../../src/threadpool.h"
 #include <iostream>
 #include "../../benchmarks/fib.h"
 #include <chrono>
-#define BENCHMARK 50 
+#define BENCHMARK 45 
 
 void run(){
 	thread_pool pool;
-	std::cout << "Testing threadpool" << std::endl;
+	std::cout << "Testing Threadpool with Work-Stealing Local-Queue" << std::endl;
 	auto val = pool.submit([&pool](){
 			return parallel_fib(pool, BENCHMARK);
 			});

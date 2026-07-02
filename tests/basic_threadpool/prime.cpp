@@ -1,13 +1,14 @@
-#include "./local_work_queue.h"
+#include "./threadpool.h"
 #include <iostream>
-#include "../../benchmarks/Prime.h"
+#include "../../benchmarks/prime.h"
 #include <chrono>
-#define BENCHMARK 1000000
-#define TEST_SIZE 1000
+#define BENCHMARK 10000000
+#define TEST_SIZE 10000
 #include <unordered_map>
+
 size_t test(size_t start, size_t end){
 	size_t res{};
-	for (size_t i{start}; i <= end; ++i){
+	for (size_t i{start}; i < end; ++i){
 		if (is_prime(i)){
 			++res;
 		}
@@ -18,7 +19,7 @@ size_t test(size_t start, size_t end){
 void run(std::unordered_map<std::thread::id, size_t>& map){
 	thread_pool pool;
 	std::mutex mux;
-	std::cout << "Testing threadpool" << std::endl;
+	std::cout << "Testing Prime With a Global Lock-Based Queue Threadpool" << std::endl;
 	size_t ciel = BENCHMARK / TEST_SIZE;
 	for (size_t i{}; i < ciel; ++i){
 		pool.submit([i, &map, &mux](){
@@ -35,6 +36,7 @@ int main(){
 	// start code
 	std::unordered_map<std::thread::id, size_t> map;
 	run(map);
+	//size_t res = test(0, BENCHMARK);
 	size_t res{};
 	for(auto const& [id, val] : map){
 		res += val;

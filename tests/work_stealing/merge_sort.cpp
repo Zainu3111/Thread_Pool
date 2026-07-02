@@ -1,17 +1,28 @@
 #include <iostream>
 #include "../../benchmarks/merge_sort.h"
-#include "../../src/Threadpool_With_Local_Deque/threadpool_with_local_queue.h"
+#include "../../src/threadpool.h"
 #include <chrono>
-#define BENCHMARK 1000000
+#define BENCHMARK 10000000
 #include <vector>
 #include <random>
 #include <algorithm>
 
+void check(std::vector<int>& vec){
+	int cur{vec[0]};
+	for(size_t i{1}; i < vec.size(); ++i){
+		if (vec[i] < cur){
+			std::cout << "Code did not work" << std::endl;
+			return ;
+		}
+		cur = vec[i];
+	}
+	std::cout << "Yaaayyyy! Code Worked" << std::endl;
+}
 void run(std::vector<int>& arr){
 	thread_pool pool;
-	std::cout << "Testing threadpool" << std::endl;
+	std::cout << "Testing Merge-Sort With a Chase-Lev Local Deque Threadpool" << std::endl;
 	auto task = pool.submit([&pool, &arr](){
-			parallel_merge_sort(pool, arr, 0, arr.size());
+			parallel_merge_sort(pool, arr, 0, arr.size() - 1);
 			});
 	task.wait();
 }
@@ -34,11 +45,7 @@ int main(){
 	auto end = std::chrono::steady_clock::now();
 
 	auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-	std::cout << "Total Time: " << ms.count() << " ms\n";
-	std::cout << "[";
-	for(size_t i{}; i < 100; ++i){
-		std::cout << arr[i] << ", ";
-	}
-	std::cout << "]" << std::endl;
+	std::cout << "Time Taken: " << ms.count() << "ms" << std::endl; 
+	check(arr);
 	return 0;
 }
