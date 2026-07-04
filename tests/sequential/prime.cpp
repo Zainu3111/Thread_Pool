@@ -1,25 +1,27 @@
-#include <iostream>
 #include "../../benchmarks/prime.h"
 #include <chrono>
-#define BENCHMARK 10000000
+#include "../../src/universal.h"
 
 int main(){
-	std::cout << "Testing Sequential Prime" << std::endl;
-	auto start = std::chrono::steady_clock::now();
 
-	// start code
-	
+	constexpr size_t BENCHMARK = 1000000;
 	size_t res{};
-	for (size_t i{0}; i <= BENCHMARK; ++i){
-		if (is_prime(i)){
-			++res;
+	size_t i{0};
+	constexpr size_t iterations = 100000000 / BENCHMARK;
+	std::string benchmark = "Sequential Prime";
+	for(size_t j{}; j < iterations; ++j){
+		auto start = std::chrono::steady_clock::now();
+		res = 0;
+		for(i = 0; i <= (j * BENCHMARK); ++i){
+			if (is_prime(i)){
+				++res;
+			}
 		}
-	}
-	// end code
-	auto end = std::chrono::steady_clock::now();
+		auto end = std::chrono::steady_clock::now();
 
-	auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-	std::cout << "Total Primes: " << res << std::endl;
-	std::cout << "Total Time: " << ms.count() << " ms\n";
+		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+		record_result(benchmark, j * BENCHMARK, 1, ms.count());
+	}
+
 	return 0;
 }

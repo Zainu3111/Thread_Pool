@@ -1,14 +1,13 @@
+#include "../../src/universal.h"
 #include "./threadpool.h"
 #include <iostream>
 #include "../../benchmarks/prime.h"
 #include <chrono>
-#define BENCHMARK 10000000
 #define TEST_SIZE 10000
 #include <unordered_map>
-
 size_t test(size_t start, size_t end){
 	size_t res{};
-	for (size_t i{start}; i < end; ++i){
+	for (size_t i{start}; i <= end; ++i){
 		if (is_prime(i)){
 			++res;
 		}
@@ -16,10 +15,10 @@ size_t test(size_t start, size_t end){
 	return res;
 }
 
-void run(std::unordered_map<std::thread::id, size_t>& map){
+void run(std::unordered_map<std::thread::id, size_t>& map, size_t BENCHMARK){
 	thread_pool pool;
 	std::mutex mux;
-	std::cout << "Testing Prime With a Global Lock-Based Queue Threadpool" << std::endl;
+//	std::cout << "Testing threadpool" << std::endl;
 	size_t ciel = BENCHMARK / TEST_SIZE;
 	for (size_t i{}; i < ciel; ++i){
 		pool.submit([i, &map, &mux](){
@@ -31,22 +30,24 @@ void run(std::unordered_map<std::thread::id, size_t>& map){
 }
 
 int main(){
-	auto start = std::chrono::steady_clock::now();
-
-	// start code
-	std::unordered_map<std::thread::id, size_t> map;
-	run(map);
-	//size_t res = test(0, BENCHMARK);
-	size_t res{};
-	for(auto const& [id, val] : map){
-		res += val;
-	}
-	// end code
-	auto end = std::chrono::steady_clock::now();
-
-	auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-	std::cout << "Total Primes: " << res << std::endl;
-	std::cout << "Total Time: " << ms.count() << " ms\n";
+	std::string benchmark = "Basic-Pool Prime";
+	constexpr size_t BENCHMARK = 1000000;
+	constexpr size_t iterations = 50000000 / BENCHMARK;
+	const int THREAD_COUNT = std::thread::hardware_concurrency();
+	for(size_t i{}; i < iterations; ++i){ 
+		auto start = std::chrono::steady_clock::now();
+		// start code
+		std::unordered_map<std::thread::id, size_t> map;
+		run(map, i * BENCHMARK);
+		size_t res{};
+		for(auto const& [id, val] : map){
+			res += val;
+		}
+		// end code
+		auto end = std::chrono::steady_clock::now();	
+		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+		record_result(benchmark, i * BENCHMARK, THREAD_COUNT, ms.count());
+		}
 	return 0;
 }
 

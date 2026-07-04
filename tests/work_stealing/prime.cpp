@@ -1,9 +1,10 @@
+#include "../../src/universal.h"
 #include "../../src/threadpool.h"
 #include <iostream>
 #include "../../benchmarks/prime.h"
 #include <chrono>
-#define BENCHMARK 10000000
-#define TEST_SIZE 1000
+//#define BENCHMARK 48000000
+#define TEST_SIZE 10000
 #include <unordered_map>
 size_t test(size_t start, size_t end){
 	size_t res{};
@@ -15,7 +16,7 @@ size_t test(size_t start, size_t end){
 	return res;
 }
 
-void run(std::unordered_map<std::thread::id, size_t>& map){
+void run(std::unordered_map<std::thread::id, size_t>& map, size_t BENCHMARK){
 	thread_pool pool;
 	std::mutex mux;
 	std::cout << "Testing threadpool" << std::endl;
@@ -30,21 +31,24 @@ void run(std::unordered_map<std::thread::id, size_t>& map){
 }
 
 int main(){
-	auto start = std::chrono::steady_clock::now();
-
-	// start code
-	std::unordered_map<std::thread::id, size_t> map;
-	run(map);
-	size_t res{};
-	for(auto const& [id, val] : map){
-		res += val;
-	}
-	// end code
-	auto end = std::chrono::steady_clock::now();
-
-	auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-	std::cout << "Total Primes: " << res << std::endl;
-	std::cout << "Total Time: " << ms.count() << " ms\n";
+	std::string benchmark = "Work-Stealing Prime";
+	constexpr size_t BENCHMARK = 1000000;
+	constexpr size_t iterations = 50000000 / BENCHMARK;
+	const int THREAD_COUNT = std::thread::hardware_concurrency();
+	for(size_t i{}; i < iterations; ++i){ 
+		auto start = std::chrono::steady_clock::now();
+		// start code
+		std::unordered_map<std::thread::id, size_t> map;
+		run(map, i * BENCHMARK);
+		size_t res{};
+		for(auto const& [id, val] : map){
+			res += val;
+		}
+		// end code
+		auto end = std::chrono::steady_clock::now();	
+		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+		record_result(benchmark, i * BENCHMARK, THREAD_COUNT, ms.count());
+		}
 	return 0;
 }
 
