@@ -1,6 +1,7 @@
 #include "../../benchmarks/prime.h"
 #include <chrono>
 #include "../../src/universal.h"
+#include <iostream>
 
 int main(){
 
@@ -10,6 +11,7 @@ int main(){
 	constexpr size_t iterations = 50000000 / BENCHMARK;
 	std::string benchmark = "Sequential Prime";
 	for(size_t j{1}; j <= iterations; ++j){
+		std::cout << "Iteration Number:" << j << std::endl;
 		auto start = std::chrono::steady_clock::now();
 		res = 0;
 		for(i = 0; i <= (j * BENCHMARK); ++i){
