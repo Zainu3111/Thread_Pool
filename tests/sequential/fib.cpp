@@ -1,22 +1,25 @@
 #include <iostream>
 #include "../../benchmarks/fib.h"
 #include <chrono>
-#define BENCHMARK 45
+#include "../../src/universal.h"
 
 int main(){
-	int n = 40;
-	auto start = std::chrono::steady_clock::now();
+	int BENCHMARK = 40;
+	const int size = 2;
+	const int THREAD_COUNT = std::thread::hardware_concurrency();
+	std::string benchmark = "Sequential Fibonacci";
+	for(int i{0}; i <= 10; i += size){
+		std::cout << "Iteration Number: " << i << std::endl;
+		auto start = std::chrono::steady_clock::now();
+		// start code
+		int res = seq_fib(BENCHMARK + i);
+		// end code
+		auto end = std::chrono::steady_clock::now();
 
-	// start code
-	std::cout << "Testing Sequential Code for Fibonacci." << std::endl;
-	int res = seq_fib(BENCHMARK);
-	// end code
-	auto end = std::chrono::steady_clock::now();
-
-	auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-//	std::cout << end.count() << std::endl;
-	std::cout << "fib " << n << ": " << res << std::endl;
-	std::cout << "Total Time: " << ms.count() << " ms\n";
+		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+	//	std::cout << end.count() << std::endl;
+		record_result(benchmark, BENCHMARK + i, THREAD_COUNT, ms.count());
+	}
 	return 0;
 }
 
