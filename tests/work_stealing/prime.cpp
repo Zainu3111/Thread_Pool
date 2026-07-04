@@ -19,7 +19,7 @@ size_t test(size_t start, size_t end){
 void run(std::unordered_map<std::thread::id, size_t>& map, size_t BENCHMARK){
 	thread_pool pool;
 	std::mutex mux;
-	std::cout << "Testing threadpool" << std::endl;
+//	std::cout << "Testing threadpool" << std::endl;
 	size_t ciel = BENCHMARK / TEST_SIZE;
 	for (size_t i{}; i < ciel; ++i){
 		pool.submit([i, &map, &mux](){
@@ -36,6 +36,7 @@ int main(){
 	constexpr size_t iterations = 50000000 / BENCHMARK;
 	const int THREAD_COUNT = std::thread::hardware_concurrency();
 	for(size_t i{}; i < iterations; ++i){ 
+		std::cout << "Iteration Number: " << i << std::endl;
 		auto start = std::chrono::steady_clock::now();
 		// start code
 		std::unordered_map<std::thread::id, size_t> map;
