@@ -8,6 +8,7 @@
 *.a
 *.lib
 *.h.gch
+*.out
 
 # Executables
 pool
