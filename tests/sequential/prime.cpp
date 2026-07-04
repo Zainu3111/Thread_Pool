@@ -7,9 +7,9 @@ int main(){
 	constexpr size_t BENCHMARK = 1000000;
 	size_t res{};
 	size_t i{0};
-	constexpr size_t iterations = 100000000 / BENCHMARK;
+	constexpr size_t iterations = 50000000 / BENCHMARK;
 	std::string benchmark = "Sequential Prime";
-	for(size_t j{}; j < iterations; ++j){
+	for(size_t j{1}; j <= iterations; ++j){
 		auto start = std::chrono::steady_clock::now();
 		res = 0;
 		for(i = 0; i <= (j * BENCHMARK); ++i){
