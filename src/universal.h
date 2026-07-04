@@ -4,7 +4,7 @@ inline void record_result(const std::string& benchmark,
 					size_t threads,
 					long long time_ms
 		){
-	std::ofstream out("/home/zain/Desktop/Threadpool/Documentation/benchmark_results.csv", std::ios::app);
+	std::ofstream out("/cshome/zainulab/threadpool/Thread_Pool/Documentation/benchmark_results.csv", std::ios::app);
 	
 	if(out.tellp() == 0){
 		out << "Benchmark, InputSize, Threads, Time(ms)\n";
