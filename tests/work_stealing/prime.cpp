@@ -35,7 +35,7 @@ int main(){
 	constexpr size_t BENCHMARK = 1000000;
 	constexpr size_t iterations = 50000000 / BENCHMARK;
 	const int THREAD_COUNT = std::thread::hardware_concurrency();
-	for(size_t i{}; i < iterations; ++i){ 
+	for(size_t i{1}; i <= iterations; ++i){ 
 		std::cout << "Iteration Number: " << i << std::endl;
 		auto start = std::chrono::steady_clock::now();
 		// start code
