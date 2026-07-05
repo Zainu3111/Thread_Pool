@@ -149,3 +149,15 @@ Basic-Pool Prime,47000000,20,4412
 Basic-Pool Prime,48000000,20,4525
 Basic-Pool Prime,49000000,20,4759
 Basic-Pool Prime,50000000,20,4792
+Work-Stealing Fibonacci,40,20,472
+Work-Stealing Fibonacci,42,20,420
+Work-Stealing Fibonacci,44,20,828
+Work-Stealing Fibonacci,46,20,4087
+Work-Stealing Fibonacci,48,20,5641
+Work-Stealing Fibonacci,50,20,14750
+Sequential Fibonacci,40,1,449
+Sequential Fibonacci,42,1,1171
+Sequential Fibonacci,44,1,3064
+Sequential Fibonacci,46,1,8033
+Sequential Fibonacci,48,1,21021
+Sequential Fibonacci,50,1,55007
