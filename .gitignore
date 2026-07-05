@@ -9,6 +9,7 @@
 *.lib
 *.h.gch
 *.out
+*.swp
 
 # Executables
 pool
