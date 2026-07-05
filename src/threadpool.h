@@ -55,7 +55,7 @@ class thread_pool{
 		// Since we are essentially in a spinning lock and done only gets 
 		// updated once, having other more rigid memory_models adds unnecessary
 		// synchronization.
-		while(!done.load(std::memory_order_relaxed) ||
+		while(!done.load(std::memory_order_acquire) ||
 				!queue_set[tl_worker_id]->empty() ||
 				!global_work_queue.empty()){
 			
@@ -127,12 +127,15 @@ class thread_pool{
 	}
 
 	~thread_pool(){
-		done = true;
+		done.store(true, std::memory_order_release);
 		global_work_queue.set_done_flag();
-		for (int i{}; i < THREAD_COUNT; ++i){
+		for (int i{}; i < threads.size(); ++i){
 			if(threads[i].joinable()) threads[i].join();
-			delete queue_set[i];
 		}
+		for (int x{}; x < queue_set.size(); ++x){
+			delete queue_set[x];
+		}
+
 	}
 
 	template<typename F>
