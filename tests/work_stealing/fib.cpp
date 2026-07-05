@@ -26,7 +26,7 @@ int main(){
 
 		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 	//	std::cout << end.count() << std::endl;
-		//record_result(benchmark, BENCHMARK + i, THREAD_COUNT, ms.count());
+		record_result(benchmark, BENCHMARK + i, THREAD_COUNT, ms.count());
 	}
 	return 0;
 }
