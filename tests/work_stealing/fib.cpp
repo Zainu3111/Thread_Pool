@@ -2,28 +2,32 @@
 #include <iostream>
 #include "../../benchmarks/fib.h"
 #include <chrono>
-#define BENCHMARK 45 
-
-void run(){
+#include "../../src/universal.h"
+void run(size_t len){
 	thread_pool pool;
-	std::cout << "Testing Threadpool with Work-Stealing Local-Queue" << std::endl;
-	auto val = pool.submit([&pool](){
-			return parallel_fib(pool, BENCHMARK);
+	auto val = pool.submit([&pool, len](){
+			return parallel_fib(pool, len);
 			});
-	std::cout << "fib of " << BENCHMARK << " = " << val.get() << std::endl;
 }
 
 int main(){
-	auto start = std::chrono::steady_clock::now();
 
-	// start code
-	std::unordered_map<std::thread::id, size_t> map;
-	run();
-	// end code
-	auto end = std::chrono::steady_clock::now();
+	const int BENCHMARK = 40;
+	const int size = 2;
+	const int THREAD_COUNT = std::thread::hardware_concurrency();
+	std::string benchmark = "Sequential Fibonacci";
+	for(int i{0}; i <= 10; i += size){
+		std::cout << "Iteration Number: " << i << std::endl;
+		auto start = std::chrono::steady_clock::now();
+		// start code
+		run(BENCHMARK + i);
+		// end code
+		auto end = std::chrono::steady_clock::now();
 
-	auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-	std::cout << "Total Time: " << ms.count() << " ms\n";
+		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+	//	std::cout << end.count() << std::endl;
+		record_result(benchmark, BENCHMARK + i, THREAD_COUNT, ms.count());
+	}
 	return 0;
 }
 
