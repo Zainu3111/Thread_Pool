@@ -161,3 +161,9 @@ Sequential Fibonacci,44,1,3064
 Sequential Fibonacci,46,1,8033
 Sequential Fibonacci,48,1,21021
 Sequential Fibonacci,50,1,55007
+Basic-Pool Fibonacci,40,20,496
+Basic-Pool Fibonacci,42,20,175
+Basic-Pool Fibonacci,44,20,1168
+Basic-Pool Fibonacci,46,20,1475
+Basic-Pool Fibonacci,48,20,8004
+Basic-Pool Fibonacci,50,20,11463
