@@ -22,7 +22,7 @@ int main(){
 	unsigned int SEED = 31;
 	std::mt19937 gen(SEED);
 	std::uniform_int_distribution<int> distrib(1, 100000000);
-	std::string benchmark = "Work-Stealing Merge-Sort";
+	std::string benchmark = "Basic-Pool Merge-Sort";
 	const int THREAD_COUNT = std::thread::hardware_concurrency();
 	for(int i{1}; i <= 30; ++i){
 		std::cout << "Iteration Number: " << i << std::endl;
