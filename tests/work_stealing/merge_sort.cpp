@@ -19,7 +19,7 @@ void check(std::vector<int>& vec){
 }
 void run(std::vector<int>& arr){
 	thread_pool pool;
-	std::cout << "Testing Merge-Sort With a Chase-Lev Local Deque Threadpool" << std::endl;
+//	std::cout << "Testing Merge-Sort With a Chase-Lev Local Deque Threadpool" << std::endl;
 	auto task = pool.submit([&pool, &arr](){
 			parallel_merge_sort(pool, arr, 0, arr.size() - 1);
 			});
@@ -49,9 +49,9 @@ int main(){
 		auto end = std::chrono::steady_clock::now();
 	
 		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-		//record_result(benchmark, BENCHMARK * i, THREAD_COUNT, ms.count());
-		std::cout << "Time Taken: " << ms.count() << "ms" << std::endl; 
-		//check(arr);
+		record_result(benchmark, BENCHMARK * i, THREAD_COUNT, ms.count());
+		//std::cout << "Time Taken: " << ms.count() << "ms" << std::endl; 
+		check(arr);
 	}
 	return 0;
 }

@@ -37,7 +37,7 @@ inline void serial_merge_sort(std::vector<int>& arr, size_t l, size_t r){
 
 inline void parallel_merge_sort(thread_pool& pool, std::vector<int>& arr, size_t l, size_t r){
 	if(l >= r) return;
-	if( r - l <= 1000 ) return serial_merge_sort(arr, l, r);
+	if( r - l <= 50000 ) return serial_merge_sort(arr, l, r);
 	size_t mid{(l + r) / 2};
 	auto t1 = pool.submit([&pool, &arr, l, mid]() {
 			parallel_merge_sort(pool, arr, l, mid);
