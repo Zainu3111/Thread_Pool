@@ -39,7 +39,7 @@ int main(){
 		auto end = std::chrono::steady_clock::now();
 	
 		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-	//	record_result(benchmark, BENCHMARK * i, THREAD_COUNT, ms.count());
+		record_result(benchmark, BENCHMARK * i, THREAD_COUNT, ms.count());
 		std::cout << "Time Taken: " << ms.count() << "ms" << std::endl; 
 	}
 	return 0;
